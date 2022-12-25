@@ -6,7 +6,7 @@ import datetime
 import config
 import pydantic_models
 import bit
-from db import *
+from database.db import *
 
 
 @db_session
@@ -76,7 +76,7 @@ def update_wallet_balance(wallet: pydantic_models.Wallet):
     if not wallet.private_key.startswith('c'):
         testnet = False 
     else:
-        True
+        testnet = True
     # получаем объект из Bit, для работы с биткоинами
     if not testnet:
         bit_wallet = bit.Key(wallet.private_key) 
@@ -142,14 +142,13 @@ def get_user_info(user: pydantic_models.User):
             "tg_ID": user.tg_ID if user.tg_ID else None,
             "nick": user.nick if user.nick else None,
             "create_date": user.create_date,
-            # получаем все данные по кошельку
             "wallet": get_wallet_info(user.wallet),
             "sended_transactions": user.sended_transactions if user.sended_transactions else [],
             "received_transactions": user.received_transactions if user.received_transactions else []}
         
 
 @db_session
-def update_user(user: pydantic_models.User):
+def update_user(user: pydantic_models.UserToUpdate):
     user_to_update = User[user.id]
     if user.tg_ID:
         user_to_update.tg_ID = user.tg_ID

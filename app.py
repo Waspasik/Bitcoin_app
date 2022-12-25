@@ -1,86 +1,100 @@
 import fastapi
-from fastapi import Request
-import database
+from fastapi import FastAPI
+
 import pydantic_models
-import config
-import copy
+from database import crud
+
+api = FastAPI()
 
 
-api = fastapi.FastAPI()
+@api.put('/user/{user_id}')
+def update_user(user_id: int, user: pydantic_models.UserToUpdate = fastapi.Body()):
+    """Обновляем юзера"""
+    if user_id == user.id:
+        return crud.update_user(user).to_dict()
 
 
-fake_database = {'users': [
-    {
-        "id": 1,             # тут тип данных - число
-        "name": "Anna",      # тут строка
-        "nick": "Anny42",    # и тут
-        "balance": 15300     # а тут int
-     },
-
-    {
-        "id": 2,             # у второго пользователя 
-        "name": "Dima",      # такие же 
-        "nick": "dimon2319", # типы 
-        "balance": 160.23    # кроме баланса - float
-     }
-    ,{
-        "id": 3,             # у третьего
-        "name": "Vladimir",  # юзера
-        "nick": "Vova777",   # мы специально сделаем 
-        "balance": 200.1   # нестандартный тип данных в его балансе
-     }
-],}
-
-
-@api.put('/user/update/{user_id}')
-def update_user(user_id: int, user: pydantic_models.User = fastapi.Body()):
-    for index, u in enumerate(fake_database['users']):
-        if u['id'] == user_id:
-            fake_database['users'][index] = user
-            return user
-
-
-@api.delete('/user/delete/{user_id}')
+@api.delete('/user/{user_id}')
+@crud.db_session
 def delete_user(user_id: int = fastapi.Path()):
-    for index, u in enumerate(fake_database['users']):
-        if u['id'] == user_id:
-            old_bd = copy.deepcopy(fake_database)
-            del fake_database['users'][index]
-            return {'old_db': old_bd,
-                    'new_db': fake_database}
+    """
+    Удаляем юзера
+    :param user_id: 
+    :return: 
+    """
+    crud.get_user_by_id(user_id).delete()
+    return True
 
 
 @api.post('/user/create')
-def index(user: pydantic_models.User = fastapi.Body()):
-    fake_database['users'].append(user)
-    return {'User Created!': user}
+def create_user(user: pydantic_models.UserToCreate):
+    """
+    Создаем Юзера
+    :param user: 
+    :return: 
+    """
+    return crud.create_user(tg_id=user.tg_ID,
+                            nick=user.nick if user.nick else None).to_dict()
 
 
 @api.get('/get_info_by_user_id/{id:int}')
-def get_info_about_user(id):
-    return fake_database['users'][id-1]
+@crud.db_session
+def get_info_about_user(user_id):
+    """
+    Получаем инфу по юзеру
+    :param user_id: 
+    :return: 
+    """
+    return crud.get_user_info(crud.User[user_id])
 
 
 @api.get('/get_user_balance_by_id/{id:int}')
-def get_user_balance(id):
-    return fake_database['users'][id-1]['balance']
+@crud.db_session
+def get_user_balance_by_id(user_id):
+    """
+    Получаем баланс юзера
+    :param user_id: 
+    :return: 
+    """
+    crud.update_wallet_balance(crud.User[user_id].wallet)
+    return crud.User[user_id].wallet.balance
 
 
 @api.get('/get_total_balance')
+@crud.db_session
 def get_total_balance():
-    total_balance: float = 0.0
-    for user in fake_database['users']:
-        total_balance += pydantic_models.User(**user).balance 
-    return total_balance
+    """
+    Получаем общий баланс
+    
+    :return: 
+    """
+    balance = 0.0
+    crud.update_all_wallets()
+    for user in crud.User.select()[:]:
+        balance += user.wallet.balance
+    return balance
 
 
-@api.get("/users/")
-def get_users(skip: int = 0, limit: int = 10):
-    return fake_database['users'][skip: skip + limit]
+@api.get("/users")
+@crud.db_session
+def get_users():
+    """
+    Получаем всех юзеров
+    :return: 
+    """
+    users = []
+    for user in crud.User.select()[:]:
+        users.append(user.to_dict())
+    return users
 
 
-@api.get("/user/{user_id}")
-def read_user(user_id: str, query: str | None = None):
-    if query:
-        return {"user_id": user_id, "query": query}
-    return {"user_id": user_id}
+@api.get("/user_by_tg_id/{tg_id:int}")
+@crud.db_session
+def get_user_by_tg_id(tg_id):
+    """
+    Получаем юзера по айди его ТГ
+    :param tg_id: 
+    :return: 
+    """
+    user = crud.get_user_info(crud.User.get(tg_ID=tg_id))
+    return user
