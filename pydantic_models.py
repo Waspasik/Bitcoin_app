@@ -8,8 +8,8 @@ class User(pydantic.BaseModel):
     nick: str
     create_date: datetime
     wallet: 'Wallet'
-    sended_transactions: list['Transaction'] = None
-    received_transactions: list['Transaction'] = None
+    sended_transactions: list['Transaction'] = []
+    received_transactions: list['Transaction'] = []
 
 
 class Transaction(pydantic.BaseModel):

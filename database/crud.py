@@ -81,7 +81,7 @@ def update_wallet_balance(wallet: pydantic_models.Wallet):
     if not testnet:
         bit_wallet = bit.Key(wallet.private_key) 
     else:
-        bit.PrivateKeyTestnet(wallet.private_key)
+        bit_wallet = bit.PrivateKeyTestnet(wallet.private_key)
     # получаем баланс кошелька и присваиваем значение кошельку в нашей бд
     wallet.balance = bit_wallet.get_balance()
     return wallet

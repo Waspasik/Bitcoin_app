@@ -37,7 +37,7 @@ def create_user(user: pydantic_models.UserToCreate):
                             nick=user.nick if user.nick else None).to_dict()
 
 
-@api.get('/get_info_by_user_id/{id:int}')
+@api.get('/get_info_by_user_id/{user_id:int}')
 @crud.db_session
 def get_info_about_user(user_id):
     """
@@ -45,10 +45,10 @@ def get_info_about_user(user_id):
     :param user_id: 
     :return: 
     """
-    return crud.get_user_info(crud.User[user_id])
+    return crud.get_user_info(crud.User.get(id=user_id))
 
 
-@api.get('/get_user_balance_by_id/{id:int}')
+@api.get('/get_user_balance_by_id/{user_id:int}')
 @crud.db_session
 def get_user_balance_by_id(user_id):
     """
@@ -56,7 +56,6 @@ def get_user_balance_by_id(user_id):
     :param user_id: 
     :return: 
     """
-    crud.update_wallet_balance(crud.User[user_id].wallet)
     return crud.User[user_id].wallet.balance
 
 
@@ -65,7 +64,6 @@ def get_user_balance_by_id(user_id):
 def get_total_balance():
     """
     Получаем общий баланс
-    
     :return: 
     """
     balance = 0.0
