@@ -73,60 +73,119 @@ def admin_panel(message):
 
 @bot.message_handler(func=lambda message: message.from_user.id == config.tg_admin_id and message.text == "Все пользователи")
 def all_users(message):
-    text = f'Пользователи:'
-    inline_markup = types.InlineKeyboardMarkup()
-    for user in users:
-        inline_markup.add(types.InlineKeyboardButton(text=f'Пользователь: {user["name"]}',
-                                                             callback_data=f"user_{user['id']}"))
-    bot.send_message(message.chat.id, text, reply_markup=inline_markup)
+    page = 1
+    count_page = len(users) // 4 + bool(len(users) % 4)
+    left_board = 0
+    right_board = 4
+    markup = types.InlineKeyboardMarkup()
+    for i in range(left_board, right_board):
+        markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
+                                              callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
+    markup.add(types.InlineKeyboardButton(text='Скрыть', callback_data='unseen'))
+    markup.add(types.InlineKeyboardButton(text=f'{page}/{count_page}', callback_data=f' '),
+               types.InlineKeyboardButton(text=f'Вперёд --->',
+                                          callback_data=f"pagination?{page+1}?{left_board+4}?{right_board+4}?{count_page}"))
+    bot.send_message(message.chat.id, 'Пользователи:', reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    query_type = call.data.split('_')[0]
-    if query_type == 'user':
-        user_id = call.data.split('_')[1]
-        inline_markup = types.InlineKeyboardMarkup()
-        for user in users:
-            if str(user['id']) == user_id:
-                back = types.InlineKeyboardButton(text='Назад', callback_data='users')
-                delete_user = types.InlineKeyboardButton(text='Удалить юзера', callback_data=f'delete_user_{user_id}')
-                inline_markup.add(back, delete_user)
-                bot.edit_message_text(text=f'Данные по пользователю:\n'
-                                           f'ID: {user["id"]}\n'
-                                           f'Имя: {user["name"]}\n'
-                                           f'Ник: {user["nick"]}\n'
-                                           f'Баланс: {user["balance"]}',
-                                      chat_id=call.message.chat.id,
-                                      message_id=call.message.message_id,
-                                      reply_markup=inline_markup)
-                print('Запрошен ', user)
-                break
-    if query_type == 'users':
-        inline_markup = types.InlineKeyboardMarkup()
-        for user in users:
-            show_user = types.InlineKeyboardButton(text=f'Пользователь: {user["name"]}',
-                                                   callback_data=f"user_{user['id']}")
-            inline_markup.add(show_user)
-            bot.edit_message_text(text='Пользователи:',
-                                 chat_id=call.message.chat.id,
-                                 message_id=call.message.message_id,
-                                 reply_markup=inline_markup)
-    if query_type == 'delete' and call.data.split('_')[1] == 'user':
-        user_id = int(call.data.split('_')[2])
+    query = call.data.split('?')
+    query_type = call.data.split('?')[0]
+    print(query_type)
+
+    # Обработка кнопки - скрыть
+    if query_type == 'unseen':
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    
+    # Обработка кнопки - вперед и назад
+    elif query_type == 'pagination':
+        page = int(query[1])
+        left_board = int(query[2])
+        right_board = int(query[3])
+        count_page = len(users) // 4 + bool(len(users) % 4)
+        markup = types.InlineKeyboardMarkup()
+        if page == 1:
+            for i in range(left_board, right_board):
+                markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
+                                                      callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
+            markup.add(types.InlineKeyboardButton(text='Скрыть', callback_data='unseen'))
+            markup.add(types.InlineKeyboardButton(text=f'{page}/{count_page}', callback_data=f' '),
+                       types.InlineKeyboardButton(text=f'Вперёд --->',
+                                                  callback_data=f"pagination?{page+1}?{left_board+4}?{right_board+4}?{count_page}"))
+        elif page == count_page:
+            if bool(len(users) % 4):
+                for i in range(left_board, len(users)):
+                    markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
+                                                          callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
+                markup.add(types.InlineKeyboardButton(text='Скрыть', callback_data='unseen'))
+                markup.add(types.InlineKeyboardButton(text=f'<--- Назад',
+                                                      callback_data=f"pagination?{page-1}?{left_board-4}?{right_board-4}?{count_page}"),
+                           types.InlineKeyboardButton(text=f'{page}/{count_page}', callback_data=f' '))
+            else:
+                for i in range(left_board, right_board):
+                    markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
+                                                    callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
+                markup.add(types.InlineKeyboardButton(text='Скрыть', callback_data='unseen'))
+                markup.add(types.InlineKeyboardButton(text=f'<--- Назад',
+                                                callback_data=f"pagination?{page-1}?{left_board-4}?{right_board-4}?{count_page}"),
+                           types.InlineKeyboardButton(text=f'{page}/{count_page}', callback_data=f' '))
+        else:
+            for i in range(left_board, right_board):
+                markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
+                                                callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
+            markup.add(types.InlineKeyboardButton(text='Скрыть', callback_data='unseen'))
+            markup.add(types.InlineKeyboardButton(text=f'<--- Назад',
+                                            callback_data=f"pagination?{page-1}?{left_board-4}?{right_board-4}?{count_page}"),
+                       types.InlineKeyboardButton(text=f'{page}/{count_page}', callback_data=f' '),
+                       types.InlineKeyboardButton(text=f'Вперёд --->',
+                                            callback_data=f"pagination?{page+1}?{left_board+4}?{right_board+4}?{count_page}"))
+        bot.edit_message_text(text='Пользователи:',
+                              chat_id=call.message.chat.id,
+                              message_id=call.message.message_id,
+                              reply_markup=markup)
+    
+    # Обработка запроса пользователя
+    elif query_type == 'user':
+        page = int(query[2])
+        left_board = int(query[3])
+        right_board = int(query[4])
+        count_page = len(users) // 4 + bool(len(users) % 4)
+        user_index_list = int(call.data.split('?')[1]) - 1
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton(text='Назад',
+                                              callback_data=f"pagination?{page}?{left_board}?{right_board}?{count_page}"),
+                   types.InlineKeyboardButton(text='Удалить пользователя',
+                                              callback_data=f'delete?{user_index_list}?{page}?{left_board}?{right_board}?{count_page}'))
+        bot.edit_message_text(f'<b>id:</b> <i>{users[user_index_list]["id"]}</i>\n'
+                              f'<b>Имя:</b> <i>{users[user_index_list]["name"]}</i>\n'
+                              f'<b>Ник:</b><i>{users[user_index_list]["nick"]}</i>\n'
+                              f'<b>Баланс:</b><i> {users[user_index_list]["balance"]}</i>',
+                              parse_mode="HTML",
+                              chat_id=call.message.chat.id,
+                              message_id=call.message.message_id,
+                              reply_markup = markup)
+        print('Запрошен ', users[user_index_list])
+    
+    # Удаление пользователя
+    elif query_type == 'delete':
+        page = int(query[2])
+        left_board = int(query[3])
+        right_board = int(query[4])
+        count_page = len(users) // 4 + bool(len(users) % 4)
+        user_id = int(call.data.split('?')[1]) + 1
         for index, user in enumerate(users):
-            print(user['name'])
             if user['id'] == user_id:
                 print(f'Удален пользователь: {users[index]}')
                 users.pop(index)
-        inline_markup = types.InlineKeyboardButton
-        for user in users:
-            show_user = types.InlineKeyboardButton(text=f'Пользователь: {user["name"]}',
-                                                   callback_data=f"user_{user['id']}")
-            bot.edit_message_text(text='Пользователи:',
-                                 chat_id=call.message.chat.id,
-                                 message_id=call.message.message_id,
-                                 reply_markup=inline_markup)
+        print(users)
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton(text='К списку пользователей',
+                                              callback_data=f"pagination?{page}?{left_board}?{right_board}?{count_page}"))
+        bot.edit_message_text(text='Пользователи:',
+                              chat_id=call.message.chat.id,
+                              message_id=call.message.message_id,
+                              reply_markup=markup)
 
 
 @bot.message_handler(func=lambda message: message.from_user.id == config.tg_admin_id and message.text == 'Общий баланс')
