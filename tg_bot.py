@@ -105,7 +105,13 @@ def callback_query(call):
         right_board = int(query[3])
         count_page = len(users) // 4 + bool(len(users) % 4)
         markup = types.InlineKeyboardMarkup()
-        if page == 1:
+        if count_page == 1:
+            for i in range(left_board, len(users)):
+                markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
+                                                      callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
+            markup.add(types.InlineKeyboardButton(text='Скрыть', callback_data='unseen'))
+            markup.add(types.InlineKeyboardButton(text=f'{page}/{count_page}', callback_data=f' '))
+        elif page == 1:
             for i in range(left_board, right_board):
                 markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
                                                       callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
@@ -125,21 +131,21 @@ def callback_query(call):
             else:
                 for i in range(left_board, right_board):
                     markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
-                                                    callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
+                                                          callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
                 markup.add(types.InlineKeyboardButton(text='Скрыть', callback_data='unseen'))
                 markup.add(types.InlineKeyboardButton(text=f'<--- Назад',
-                                                callback_data=f"pagination?{page-1}?{left_board-4}?{right_board-4}?{count_page}"),
+                                                      callback_data=f"pagination?{page-1}?{left_board-4}?{right_board-4}?{count_page}"),
                            types.InlineKeyboardButton(text=f'{page}/{count_page}', callback_data=f' '))
         else:
             for i in range(left_board, right_board):
                 markup.add(types.InlineKeyboardButton(text=f'Пользователь: {users[i]["name"]}',
-                                                callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
+                                                      callback_data=f"user?{users[i]['id']}?{page}?{left_board}?{right_board}?{count_page}"))
             markup.add(types.InlineKeyboardButton(text='Скрыть', callback_data='unseen'))
             markup.add(types.InlineKeyboardButton(text=f'<--- Назад',
-                                            callback_data=f"pagination?{page-1}?{left_board-4}?{right_board-4}?{count_page}"),
+                                                  callback_data=f"pagination?{page-1}?{left_board-4}?{right_board-4}?{count_page}"),
                        types.InlineKeyboardButton(text=f'{page}/{count_page}', callback_data=f' '),
                        types.InlineKeyboardButton(text=f'Вперёд --->',
-                                            callback_data=f"pagination?{page+1}?{left_board+4}?{right_board+4}?{count_page}"))
+                                                  callback_data=f"pagination?{page+1}?{left_board+4}?{right_board+4}?{count_page}"))
         bot.edit_message_text(text='Пользователи:',
                               chat_id=call.message.chat.id,
                               message_id=call.message.message_id,
@@ -151,21 +157,23 @@ def callback_query(call):
         left_board = int(query[3])
         right_board = int(query[4])
         count_page = len(users) // 4 + bool(len(users) % 4)
-        user_index_list = int(call.data.split('?')[1]) - 1
+        user_id = int(call.data.split('?')[1])
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton(text='Назад',
                                               callback_data=f"pagination?{page}?{left_board}?{right_board}?{count_page}"),
                    types.InlineKeyboardButton(text='Удалить пользователя',
-                                              callback_data=f'delete?{user_index_list}?{page}?{left_board}?{right_board}?{count_page}'))
-        bot.edit_message_text(f'<b>id:</b> <i>{users[user_index_list]["id"]}</i>\n'
-                              f'<b>Имя:</b> <i>{users[user_index_list]["name"]}</i>\n'
-                              f'<b>Ник:</b><i>{users[user_index_list]["nick"]}</i>\n'
-                              f'<b>Баланс:</b><i> {users[user_index_list]["balance"]}</i>',
+                                              callback_data=f'delete?{user_id}?{page}?{left_board}?{right_board}?{count_page}'))
+        for index, user in enumerate(users):
+            if user['id'] == user_id:
+                bot.edit_message_text(f'<b>id:</b> <i>{users[index]["id"]}</i>\n'
+                              f'<b>Имя:</b> <i>{users[index]["name"]}</i>\n'
+                              f'<b>Ник:</b><i>{users[index]["nick"]}</i>\n'
+                              f'<b>Баланс:</b><i> {users[index]["balance"]}</i>',
                               parse_mode="HTML",
                               chat_id=call.message.chat.id,
                               message_id=call.message.message_id,
                               reply_markup = markup)
-        print('Запрошен ', users[user_index_list])
+                print('Запрошен ', users[index])
     
     # Удаление пользователя
     elif query_type == 'delete':
@@ -173,15 +181,20 @@ def callback_query(call):
         left_board = int(query[3])
         right_board = int(query[4])
         count_page = len(users) // 4 + bool(len(users) % 4)
-        user_id = int(call.data.split('?')[1]) + 1
+        user_id = int(call.data.split('?')[1])
         for index, user in enumerate(users):
             if user['id'] == user_id:
                 print(f'Удален пользователь: {users[index]}')
                 users.pop(index)
         print(users)
+        count_page_after_delete = len(users) // 4 + bool(len(users) % 4)
+        if count_page > count_page_after_delete:
+            left_board = len(users) - 4
+            right_board = len(users)
+            page = right_board // 4 + bool(len(users) % 4)
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton(text='К списку пользователей',
-                                              callback_data=f"pagination?{page}?{left_board}?{right_board}?{count_page}"))
+                                              callback_data=f"pagination?{page}?{left_board}?{right_board}?{len(users) // 4 + bool(len(users) % 4)}"))
         bot.edit_message_text(text='Пользователи:',
                               chat_id=call.message.chat.id,
                               message_id=call.message.message_id,
