@@ -188,10 +188,10 @@ def callback_query(call):
                 users.pop(index)
         print(users)
         count_page_after_delete = len(users) // 4 + bool(len(users) % 4)
-        if count_page > count_page_after_delete:
+        if count_page > count_page_after_delete and page == count_page:
             left_board = len(users) - 4
             right_board = len(users)
-            page = right_board // 4 + bool(len(users) % 4)
+            page -= 1
         markup = types.InlineKeyboardMarkup()
         markup.add(types.InlineKeyboardButton(text='К списку пользователей',
                                               callback_data=f"pagination?{page}?{left_board}?{right_board}?{len(users) // 4 + bool(len(users) % 4)}"))
