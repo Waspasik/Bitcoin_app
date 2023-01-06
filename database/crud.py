@@ -161,6 +161,7 @@ def update_user(user: pydantic_models.UserToUpdate):
     return user_to_update
 
 
-# @db_session
-# def get_user_transactions(id: int):
-#     return Transaction.select()
+@db_session
+def get_user_transactions(id: int):
+    print(User[id].sended_transactions)
+    return User[id].sended_transactions

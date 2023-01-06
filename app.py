@@ -104,7 +104,7 @@ def get_user_wallet(user_id):
     return crud.get_wallet_info(crud.User[user_id].wallet)
 
 
-# @api.get('/get_user_transaction/{user_id:int}')
-# @crud.db_session
-# def get_user_transaction(user_id):
-#     return crud.get_user_transactions(crud.User[user_id].wallet)
+@api.get('/get_user_transaction/{user_id:int}')
+@crud.db_session
+def get_user_transaction(user_id):
+    return crud.get_user_transactions(user_id)
